@@ -50,6 +50,7 @@ def initTracker(img, corners):
     # initialize your tracker with the first frame from the sequence and
     # the corresponding corners from the ground truth
     # this function does not return anything
+    print corners
     pass
 
 
