@@ -50,8 +50,25 @@ def initTracker(img, corners):
     # initialize your tracker with the first frame from the sequence and
     # the corresponding corners from the ground truth
     # this function does not return anything
+
+    # Reference: http://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_video/py_meanshift/py_meanshift.html
+
+    # setup initial location of window
+    r, h, c, w = 250, 90, 400, 125  # simply hardcoded the values
+
+    track_window = (c, r, w, h)
     print corners
-    pass
+
+    # set up the ROI for tracking
+    roi = init_img[r:r + h, c:c + w]
+    hsv_roi = cv2.cvtColor(init_img, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv_roi, np.array((0., 60., 32.)), np.array((180., 255., 255.)))
+    roi_hist = cv2.calcHist([hsv_roi], [0], mask, [180], [0, 180])
+    cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
+
+    # Setup the termination criteria, either 10 iteration or move by atleast 1 pt
+    term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
+    return
 
 
 def updateTracker(img):
