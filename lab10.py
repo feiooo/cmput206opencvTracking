@@ -5,6 +5,7 @@ import numpy as np
 import math
 import time
 
+track_window = ()
 
 def readTrackingData(filename):
     if not os.path.isfile(filename):
@@ -46,6 +47,19 @@ def drawRegion(img, corners, color, thickness=1):
         cv2.line(img, p1, p2, color, thickness)
 
 
+def getCorners(corners):
+    global ulx, uly, urx, ury, lrx, lry, llx, lly
+    ulx = np.int(corners[0][0])
+    uly = np.int(corners[1][0])
+    urx = np.int(corners[0][1])
+    ury = np.int(corners[1][1])
+    lrx = np.int(corners[0][2])
+    lry = np.int(corners[1][2])
+    llx = np.int(corners[0][3])
+    lly = np.int(corners[1][3])
+    return
+
+
 def initTracker(img, corners):
     # initialize your tracker with the first frame from the sequence and
     # the corresponding corners from the ground truth
@@ -56,17 +70,22 @@ def initTracker(img, corners):
     # setup initial location of window
     r, h, c, w = 250, 90, 400, 125  # simply hardcoded the values
 
+    getCorners(corners)
+    global track_window
+    #w = urx - ulx
+    #h = lly - uly
     track_window = (c, r, w, h)
-    print corners
 
     # set up the ROI for tracking
-    roi = init_img[r:r + h, c:c + w]
-    hsv_roi = cv2.cvtColor(init_img, cv2.COLOR_BGR2HSV)
+    roi = img[ulx: urx, uly: lly]
+    hsv_roi = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv_roi, np.array((0., 60., 32.)), np.array((180., 255., 255.)))
+    global roi_hist
     roi_hist = cv2.calcHist([hsv_roi], [0], mask, [180], [0, 180])
     cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
 
-    # Setup the termination criteria, either 10 iteration or move by atleast 1 pt
+    # Setup the termination criteria, either 10 iteration or move by at least 1 pt
+    global term_crit
     term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1)
     return
 
@@ -76,6 +95,12 @@ def updateTracker(img):
     # at present it simply returns the actual corners with an offset so that
     # a valid value is returned for the code to run without errors
     # this is only for demonstration purpose and your code must NOT use actual corners in any way
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    dst = cv2.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)
+    # apply meanshift to get the new location
+    global track_window
+    ret, track_window = cv2.meanShift(dst, track_window, term_crit)
+
     return actual_corners + 5
 
 
