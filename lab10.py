@@ -50,14 +50,31 @@ def drawRegion(img, corners, color, thickness=1):
 def getCorners(corners):
     global ulx, uly, urx, ury, lrx, lry, llx, lly
     ulx = np.int(corners[0][0])
-    uly = np.int(corners[1][0])
     urx = np.int(corners[0][1])
-    ury = np.int(corners[1][1])
     lrx = np.int(corners[0][2])
-    lry = np.int(corners[1][2])
     llx = np.int(corners[0][3])
+
+    uly = np.int(corners[1][0])
+    ury = np.int(corners[1][1])
+    lry = np.int(corners[1][2])
     lly = np.int(corners[1][3])
     return
+
+
+def updateCorners(window):
+    global ulx, uly, urx, ury, lrx, lry, llx, lly
+    ulx = window[0]
+    uly = window[1]
+    w = window[2]
+    h = window[3]
+    urx = ulx + w
+    ury = uly
+    lly = uly + h
+    llx = ulx
+    lry = lly
+    lrx = llx + w
+    corners = np.array([[np.float(ulx), np.float(urx), np.float(lrx), np.float(llx)], [np.float(uly), np.float(ury), np.float(lry), np.float(lly)]])
+    return corners
 
 
 def initTracker(img, corners):
@@ -68,16 +85,18 @@ def initTracker(img, corners):
     # Reference: http://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_video/py_meanshift/py_meanshift.html
 
     # setup initial location of window
-    r, h, c, w = 250, 90, 400, 125  # simply hardcoded the values
+    #r, h, c, w = 250, 90, 400, 125  # simply hardcoded the values
 
+    #print corners
     getCorners(corners)
     global track_window
-    #w = urx - ulx
-    #h = lly - uly
-    track_window = (c, r, w, h)
-
+    w = urx - ulx
+    h = lly - uly
+    track_window = (ulx, uly, w, h)
+    #print track_window
     # set up the ROI for tracking
-    roi = img[ulx: urx, uly: lly]
+    roi = img[ulx: urx][uly: lry]
+    #roi = img
     hsv_roi = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv_roi, np.array((0., 60., 32.)), np.array((180., 255., 255.)))
     global roi_hist
@@ -96,12 +115,13 @@ def updateTracker(img):
     # a valid value is returned for the code to run without errors
     # this is only for demonstration purpose and your code must NOT use actual corners in any way
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    global roi_hist
     dst = cv2.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)
     # apply meanshift to get the new location
-    global track_window
-    ret, track_window = cv2.meanShift(dst, track_window, term_crit)
-
-    return actual_corners + 5
+    global track_window, term_crit
+    ret, track_window = cv2.CamShift(dst, track_window, term_crit)
+    actual_corners = updateCorners(track_window)
+    return actual_corners
 
 
 if __name__ == '__main__':
